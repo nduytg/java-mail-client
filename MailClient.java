@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.security.Key;
 import java.util.Properties;
 import java.util.Vector;
@@ -68,13 +69,16 @@ public class MailClient {
 	public static void main(String[] args)
 	{
 		Person sender = new Person("ipmanxjackiechan@gmail.com","123a4567bcd");
-		Person receiver = new Person("zzzthanhcongzzz@gmail.com");
+		Person receiver = new Person("tugianghaidang125@gmail.com");
 		MailContent mailContent = new MailContent();
 		mailContent.setTitle("F*ck Cong!");
 		mailContent.setContent("F*ck you nln");
 		mailContent.setHost("smtp.gmail.com");
 		//mailContent.recveiver.
-		MailClient.sendMail(sender,receiver,mailContent);
+		//MailClient.sendMail(sender,receiver,mailContent);
+		MailClient.checkMail(sender, "smtp.gmail.com");
+		
+		
 		//MyCrypto cryptoHandler = new MyCrypto();
 		//cryptoHandler.digestMessage("HelloWorld", "SHA-1");
 		//String mode = "AES";
@@ -82,6 +86,51 @@ public class MailClient {
 		//String key = cryptoHandler.createSymmetricKey(keySize, mode);
 		//cryptoHandler.importSymmetricKey(key, mode);
 		//cryptoHandler.encryptMessage(MyCrypto.stringToKey(key), "Hi, I'm Duy ^^");
+	}
+	
+	public static void fetchMail(Person acc, String host)
+	{
+		
+	}
+	
+	public static void checkMail(Person acc, String host)
+	{
+
+		try 
+		{
+			Properties props = new Properties();
+			  props.put("mail.pop3.host", host);
+			  props.put("mail.pop3.port", "995");
+			  props.put("mail.pop3.starttls.enable", "true");
+			Session session = Session.getDefaultInstance(props);
+			Store store = session.getStore("pop3s");
+			
+			store.connect(host,acc.username,acc.password);
+			
+			//Lấy thư mục inbox từ account
+			Folder folder = store.getFolder("INBOX");
+			folder.open(Folder.READ_ONLY);
+			
+			// Duyệt thư mục xử lý mail
+			Message message[] = folder.getMessages();
+			for(int i=0; i < message.length; i++)
+			{
+				System.out.println("Mail #" + (i+1));
+				//message[i].ge
+				System.out.println("From: " + message[i].getFrom()[0]);
+				System.out.println("Subject: " + message[i].getSubject());
+				//System.out.println("Content:\n" + message[i].getContent());
+				//message[i].get
+			}
+			
+			folder.close(false);
+			store.close();
+		} 
+		catch (MessagingException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public static void sendMail(Person sender, Person receiver, MailContent mailContent) 
