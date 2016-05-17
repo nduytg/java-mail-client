@@ -4,11 +4,17 @@
 
 // 2 thư viện security cho java
 import java.security.*;
-import java.util.*;
+import java.util.Base64;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.Cipher;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.String;
 
@@ -50,95 +56,180 @@ public class MyCrypto
 	
 	
 	// Tao symmetric key dung de ma hoa van ban
-	public String createSymmetricKey(int keySize, String mode)
+	// Cai nay dung de tao random session key 
+	// cho mode Ket hop ma hoa doi xung va bat doi xung
+//	public String createSymmetricKey(int keySize, String mode)
+//	{
+//		String encodedKey = null;
+//		if(keySize <= 0)
+//		{
+//			System.out.println("Invalid key size, key size must be postive!");
+//			return encodedKey;
+//		}
+//		
+//		if(keySize < 128)
+//		{
+//			System.out.println("Warning: Key size is less than 128 bits!");	
+//		}
+//		
+//		try 
+//		{
+//			// Khoi tao key!
+//			KeyGenerator keyGen = KeyGenerator.getInstance(mode);
+//			keyGen.init(keySize);
+//			Key key = keyGen.generateKey();
+//			System.out.println("Algorithm: " + mode);
+//			System.out.println("Key generated: " + key.toString());
+//			System.out.println("Key Generation Completed!");
+//			
+//			//Encode lai thanh string de export ra
+//			//byte[] keyBytes = key.getEncoded();
+//			//encodedKey = new String(Base64.getEncoder().encode(keyBytes));
+//			encodedKey = keyToString(key);
+//			System.out.println("Your secret key: " + encodedKey);
+//			return encodedKey;
+//		} 
+//		catch (NoSuchAlgorithmException e) 
+//		{
+//			System.out.println("Only supported: DES, TripleDES, AES, RC2, RC4, RC5, Blowfish, PBE.");
+//			e.printStackTrace();
+//		}
+//		return encodedKey;
+//	}
+	
+	// Algorithm: AES
+	// Mode: CBC
+	// Tham so: Key, IV, Messsge
+	public static String symEncryptMessage(String key, String initVector, String message)
 	{
-		String encodedKey = null;
-		if(keySize <= 0)
-		{
-			System.out.println("Invalid key size, key size must be postive!");
-			return encodedKey;
-		}
-		
-		if(keySize < 128)
-		{
-			System.out.println("Warning: Key size is less than 128 bits!");	
-		}
-		
 		try 
 		{
-			// Khoi tao key!
-			KeyGenerator keyGen = KeyGenerator.getInstance(mode);
-			keyGen.init(keySize);
-			Key key = keyGen.generateKey();
-			System.out.println("Algorithm: " + mode);
-			System.out.println("Key generated: " + key.toString());
-			System.out.println("Key Generation Completed!");
+			IvParameterSpec iv = new IvParameterSpec(initVector.getBytes("UTF-8"));
+			// Hash thanh 32 bytes - 256 bits key
+			MessageDigest sha = MessageDigest.getInstance("SHA-256");
+			byte[] keyBytes = sha.digest(key.getBytes());
 			
-			//Encode lai thanh string de export ra
-			byte[] keyBytes = key.getEncoded();
-			encodedKey = new String(Base64.getEncoder().encode(keyBytes));
-			System.out.println("Your secret key: " + encodedKey);
-			return encodedKey;
+			//SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"),"AES");
+			SecretKeySpec keySpec = new SecretKeySpec(keyBytes,"AES");
+			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+			cipher.init(Cipher.ENCRYPT_MODE, keySpec, iv);
+			
+			byte[] cipherBytes = cipher.doFinal(message.getBytes());
+			String cipherText = new String(Base64.getEncoder().encode(cipherBytes));
+			System.out.println("Encrypted Message: " + cipherText);
+			
+			return cipherText;	
+		}
+		catch (NoSuchAlgorithmException | BadPaddingException | InvalidKeyException | InvalidAlgorithmParameterException
+				| NoSuchPaddingException | UnsupportedEncodingException | IllegalBlockSizeException e)
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+
+		System.out.println("Encrypt failed!!");
+		return null; 
+	}
+	
+	public static String symDecryptMessage(String key, String initVector, String cipherText)
+	{
+		try 
+		{
+			IvParameterSpec iv = new IvParameterSpec(initVector.getBytes("UTF-8"));
+			
+			// Hash thanh 32 bytes - 256 bits key
+			MessageDigest sha = MessageDigest.getInstance("SHA-256");
+			byte[] keyBytes = sha.digest(key.getBytes());
+			
+			//SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"),"AES");
+			SecretKeySpec keySpec = new SecretKeySpec(keyBytes,"AES");
+			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
+			cipher.init(Cipher.DECRYPT_MODE, keySpec, iv);
+			
+			byte[] plainBytes = cipher.doFinal(Base64.getDecoder().decode(cipherText));
+			String plainText = new String(plainBytes);
+			System.out.println("Decrypted Message: " + plainText);
+			
+			return plainText;
+		}
+		catch (NoSuchAlgorithmException | BadPaddingException | InvalidKeyException | NoSuchPaddingException |
+				UnsupportedEncodingException | IllegalBlockSizeException | InvalidAlgorithmParameterException e)
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		System.out.println("Decrypt failed!!");
+		return null;
+	}
+	
+	
+	public static String AsymEncryptMessage(String key, String initVector, String message)
+	{
+		return "";
+	}
+	
+	public static String AsymDecryptMessage(String key, String initVector, String cipherText)
+	{
+		return "";
+	}
+	
+	
+	// Generate 2048-bit RSA Key Pair
+	public static KeyPair createRSAKeyPair()
+	{	
+		try 
+		{
+			System.out.println("Generating RSA Key pair....");
+			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+			keyGen.initialize(2048);
+			KeyPair keyPair = keyGen.generateKeyPair();
+			System.out.println("RSA key pair has been completed! ^^");
+			System.out.println("Private Key: " + keyToString(keyPair.getPrivate()));
+			System.out.println("Public Key: " + keyPair.getPublic());
+			return keyPair;
 		} 
 		catch (NoSuchAlgorithmException e) 
 		{
-			System.out.println("Only supported: DES, TripleDES, AES, RC2, RC4, RC5, Blowfish, PBE.");
-			e.printStackTrace();
-		}
-		return encodedKey;
-	}
-	
-	public SecretKeySpec importSymmetricKey(String secretKey, String mode)
-	{
-		SecretKeySpec keySpec = null;
-		if(secretKey.length() <= 0 || mode.length() <= 0)
-		{
-			System.out.println("Invalid input, input size must larger than 0!");
-			return keySpec;
-		}
-			
-		byte[] keyBytes;
-		try 
-		{
-			keyBytes = Base64.getDecoder().decode(secretKey.getBytes("UTF-8"));
-			keySpec = new SecretKeySpec(keyBytes,mode);
-			System.out.println("Key get: " + keySpec.toString());
-			System.out.println("Key algorithm: " + keySpec.getAlgorithm());
-		} 
-		catch (UnsupportedEncodingException e) 
-		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return keySpec;
+		System.out.println("Failed in generating RSA Key Pair...!");
+		return null;
 	}
 	
-	public String encryptMessage(Key key, String message)
-	{
-		try 
-		{
-			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-			System.out.println("Key provider:\n" + cipher.getProvider().getInfo());
-			
-			System.out.println("Message is being encrypted...");
-			cipher.init(Cipher.ENCRYPT_MODE, key);
-			byte[] plainText = message.getBytes("UTF-8");
-			byte[] cipherText = cipher.doFinal(plainText);
-			String encryptMess = new String (cipherText,"UTF-8");
-			System.out.println("Message is encrypted!");
-			System.out.println("Ciphertext: " + encryptMess);
-			return encryptMess;
+	 public static void exportRSAtoXML(KeyPair keypair, String filename)
+	 {
+		
+		try {
+			ObjectOutputStream outputStream;
+			outputStream = new ObjectOutputStream(new FileOutputStream(filename));
+			outputStream.writeObject(keypair);
+			outputStream.close();
 		}
-		catch (NoSuchAlgorithmException | BadPaddingException | InvalidKeyException | NoSuchPaddingException e)
+		catch (FileNotFoundException e) 
 		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
-		catch (UnsupportedEncodingException | IllegalBlockSizeException e) {
+		catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace(); 
-		}
-		return null; 
+			e.printStackTrace();
+		} 
+	 }
+	
+	public void importRSAKeyPair()
+	{
+		
+	}
+	
+	public void importRSAPrivate()
+	{
+		
+	}
+	
+	public void importRSAPublic()
+	{
+		
 	}
 	
 	public static String keyToString(Key key)
@@ -147,41 +238,22 @@ public class MyCrypto
 		return new String(Base64.getEncoder().encode(keyBytes));
 	}
 	
-	public static Key stringToKey(String string)
+	public static Key stringToKey(String string, String mode)
 	{
 		Key key = null;
 		byte[] keyBytes;
 		try 
 		{
 			keyBytes = Base64.getDecoder().decode(string.getBytes("UTF-8"));
-			SecretKeySpec keySpec = new SecretKeySpec(keyBytes,"AES");
+			SecretKeySpec keySpec = new SecretKeySpec(keyBytes,mode);
 			key = keySpec;
 		} catch (UnsupportedEncodingException e) 
 		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
 		return key;
 	}
-	
-	public void decryptMessage(Key key, String message)
-	{
-		
-	}
-	
-	public String encryptAsymmetricKey(String plainText, String mode)
-	{
-
-		return "";
-	}
-	
-	public String decryptAsymmetricKey(String cipherText)
-	{
-		String plainText;
-		return "";
-	}
-	
 	
 	
 	public String getPrivateKey() {
@@ -202,8 +274,6 @@ public class MyCrypto
 	public void setSymmetricKey(String symmetricKey) {
 		this.symmetricKey = symmetricKey;
 	}
-
-	
 }
 
 
