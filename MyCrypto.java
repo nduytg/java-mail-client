@@ -11,8 +11,9 @@ import java.util.Base64;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
-import javax.xml.bind.DatatypeConverter;
 import javax.crypto.spec.IvParameterSpec;
+//import javax.xml.bind.DatatypeConverter;
+
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -32,9 +33,76 @@ public class MyCrypto
 	private String symmetricKey;
 	//Init vector luu cung, khoi can truyen qua lai
 	private String symmectricInitVector = "HelloDuyHelloDuy";
-	private String rsaInitVector = "HelloDuyHelloDuy";
 
-	public String digestMessage(String mess, String mode)
+	// Tao signature cho message
+	public static String signMess(PrivateKey key, String mess)
+	{
+		try
+		{
+			byte[] messBytes = mess.getBytes("UTF-8");
+			Signature sign = Signature.getInstance("SHA512withRSA");
+			sign.initSign(key);
+			sign.update(messBytes);
+			byte []signBytes = sign.sign();
+			String signature = new String(Base64.getEncoder().encode(signBytes));
+			System.out.println("Signature created: " + signature);
+			return signature;
+		} 
+		catch (NoSuchAlgorithmException | InvalidKeyException e)
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SignatureException e) {
+			// TODO Auto-generated catch block
+			System.out.println("Cannot signed message");
+			e.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public static boolean verifySign(PublicKey key, String originMess, String signature)
+	{
+		try 
+		{
+			byte[] originBytes = originMess.getBytes("UTF-8");
+			byte[] signBytes = Base64.getDecoder().decode(signature.getBytes("UTF-8"));
+			Signature sign = Signature.getInstance("SHA512withRSA");
+			sign.initVerify(key);
+			sign.update(originBytes);
+			boolean result =  sign.verify(signBytes);
+
+			if(result == true)
+			{
+				System.out.println("Signatured verified! ^^");
+				return true;
+			}
+			else
+			{
+				System.out.println( "Signature failed.... :'(" );
+				return false;
+			}
+		} 
+		catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SignatureException e) {
+			// TODO Auto-generated catch block
+			System.out.println( "Signature failed.... :'(" );
+			e.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return true;
+	}
+	
+	public static String digestMessage(String mess, String mode)
 	{
 		if (mess.length() == 0 || mode.length() == 0)
 		{
@@ -49,9 +117,9 @@ public class MyCrypto
 			MessageDigest messDigest = MessageDigest.getInstance(mode);
 			
 			// print out the provider used
-		    System.out.println( "\nKey provided by\n" + messDigest.getProvider().getInfo() );
+		    //System.out.println( "\nKey provided by\n" + messDigest.getProvider().getInfo() );
 			
-		   //digest message and return
+		    //digest message and return
 		    messDigest.update(plaintext);
 		    result = new String (messDigest.digest());
 		} 
@@ -76,12 +144,12 @@ public class MyCrypto
 			MessageDigest sha = MessageDigest.getInstance("SHA-256");
 			byte[] keyBytes = sha.digest(key.getBytes());
 			
-			//SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"),"AES");
 			SecretKeySpec keySpec = new SecretKeySpec(keyBytes,"AES");
 			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
 			cipher.init(Cipher.ENCRYPT_MODE, keySpec, iv);
 			
-			byte[] cipherBytes = cipher.doFinal(message.getBytes());
+			//byte[] cipherBytes = cipher.doFinal(message.getBytes());
+			byte[] cipherBytes = cipher.doFinal(message.getBytes("UTF-8"));
 			String cipherText = new String(Base64.getEncoder().encode(cipherBytes));
 			System.out.println("Encrypted Message: " + cipherText);
 			
@@ -108,7 +176,6 @@ public class MyCrypto
 			MessageDigest sha = MessageDigest.getInstance("SHA-256");
 			byte[] keyBytes = sha.digest(key.getBytes());
 			
-			//SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"),"AES");
 			SecretKeySpec keySpec = new SecretKeySpec(keyBytes,"AES");
 			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
 			cipher.init(Cipher.DECRYPT_MODE, keySpec, iv);
@@ -129,12 +196,10 @@ public class MyCrypto
 		return null;
 	}
 	
-	public static String encrypRSAMessage(PublicKey key, String initVector, String message)
+	public static String encrypRSAMessage(PublicKey key, String message)
 	{
 		try 
 		{
-			IvParameterSpec iv = new IvParameterSpec(initVector.getBytes("UTF-8"));
-
 			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 			cipher.init(Cipher.ENCRYPT_MODE, key);
 			
@@ -144,7 +209,7 @@ public class MyCrypto
 			
 			return cipherText;	
 		} 
-		catch (UnsupportedEncodingException | NoSuchPaddingException | NoSuchAlgorithmException | 
+		catch (NoSuchPaddingException | NoSuchAlgorithmException | 
 		InvalidKeyException | IllegalBlockSizeException | BadPaddingException e)
 		{
 			// TODO Auto-generated catch block
@@ -154,14 +219,10 @@ public class MyCrypto
 		return null;
 	}
 	
-	public static String decryptRSAMessage(PrivateKey key, String initVector, String cipherText)
+	public static String decryptRSAMessage(PrivateKey key, String cipherText)
 	{
 		try 
 		{
-			IvParameterSpec iv = new IvParameterSpec(initVector.getBytes("UTF-8"));
-			
-			
-			//SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"),"AES");
 			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1PADDING");
 			cipher.init(Cipher.DECRYPT_MODE, key);
 			
@@ -172,12 +233,11 @@ public class MyCrypto
 			return plainText;
 		}
 		catch (NoSuchAlgorithmException | BadPaddingException | InvalidKeyException | NoSuchPaddingException |
-				UnsupportedEncodingException | IllegalBlockSizeException e)
+				 IllegalBlockSizeException e)
 		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
-		
 		
 		System.out.println("RSA Encryption failed!");
 		return null;
@@ -207,13 +267,12 @@ public class MyCrypto
 		return null;
 	}
 	
-	// public static void exportRSAPublic
 	// ghi xuong file Pem
 	public static void exportRSAKeyPair(KeyPair keypair, String filename)
 	{
 		try
 		{
-			File keyPairFile = new File(filename);
+			File keyPairFile = new File(filename + ".pair");
 			
 			// File nay chua ca private key va public key
 			if (keyPairFile.getParentFile() != null) 
@@ -250,7 +309,6 @@ public class MyCrypto
 		} 
 	}
 	 
-	 
 	public static KeyPair importRSAKeyPair(String filename)
 	{
 		 try 
@@ -279,6 +337,13 @@ public class MyCrypto
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	// ghi xuong file Pem
+	public static void exportPublicKey(PublicKey key, String filename)
+	{
+		
+		//return null;
 	}
 	
 	public static String keyToString(Key key)
