@@ -34,6 +34,34 @@ public class MyCrypto
 	//Init vector luu cung, khoi can truyen qua lai
 	private String symmectricInitVector = "HelloDuyHelloDuy";
 
+	public static String generateRandomIv(int keySize)
+	{
+		byte[] iv = new byte[keySize / 8];	// Save the IV bytes or send it in plaintext with the encrypted data so you can decrypt the data later
+		SecureRandom prng = new SecureRandom();
+		prng.nextBytes(iv);
+		String initVector = new String(Base64.getEncoder().encode(iv));
+		System.out.println("Random iv created: " + initVector);
+		return initVector;
+	}
+	
+	public static Key generateSecretKey(String mode, int keySize)
+	{
+		try 
+		{
+			KeyGenerator keyGen = KeyGenerator.getInstance(mode);
+			keyGen.init(keySize);
+			Key key = keyGen.generateKey();
+			return key;
+		} 
+		catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			System.out.println("Unsupported mode...:'(");
+			e.printStackTrace();
+		}
+		System.out.println("Failed when create key in" + mode + " with " + keySize + " size");
+		return null;
+	}
+	
 	// Tao signature cho message
 	public static String signMess(PrivateKey key, String mess)
 	{
@@ -313,7 +341,7 @@ public class MyCrypto
 	{
 		 try 
 		 {
-			File file = new File(filename);
+			File file = new File(filename + ".pair");
 			FileReader reader = new FileReader(file);
 			BufferedReader bufReader = new BufferedReader(reader);
 			bufReader.readLine();
@@ -339,12 +367,111 @@ public class MyCrypto
 		return null;
 	}
 	
-	// ghi xuong file Pem
-	public static void exportPublicKey(PublicKey key, String filename)
+	// ghi xuong file .pub
+	public static void exportPublicKey(PublicKey pubKey, String filename)
 	{
-		
-		//return null;
+		try 
+		{
+			File keyFile = new File(filename + ".pubkey");
+			
+			// File nay chua public key
+			if (keyFile.getParentFile() != null) 
+			{
+				keyFile.getParentFile().mkdirs();
+			}
+			keyFile.createNewFile();
+			String temp;
+			PrintWriter writer = new PrintWriter(keyFile);
+			
+			temp = "-----BEGIN RSA PUBLIC KEY-----\n" + keyToString(pubKey) +
+	          "\n-----END RSA PUBLIC KEY-----\n";
+			writer.println(temp);
+			
+			
+			writer.close();
+			//return null;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
+	
+	public static PublicKey importPublicKey(String filename)
+	{
+		 try 
+		 {
+			File file = new File(filename + ".pubkey");
+			FileReader reader = new FileReader(file);
+			BufferedReader bufReader = new BufferedReader(reader);
+			
+			bufReader.readLine();
+			String strKey = bufReader.readLine();
+			PublicKey pubKey = stringToPubKey(strKey);
+				
+			bufReader.close();
+			return pubKey;
+		} 
+		 catch (IOException e) 
+		 {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	// ghi xuong file .key
+	public static void exportSymmetricKey(Key key, String filename)
+	{
+		try 
+		{
+			File keyFile = new File(filename + ".symkey");
+			
+			// File nay chua public key
+			if (keyFile.getParentFile() != null) 
+			{
+				keyFile.getParentFile().mkdirs();
+			}
+			keyFile.createNewFile();
+			String temp;
+			PrintWriter writer = new PrintWriter(keyFile);
+			
+			temp = "-----BEGIN SYMMETRIC KEY-----\n" + keyToString(key) +
+	          "\n-----END SYMMETRIC KEY-----\n";
+			writer.println(temp);
+			
+			
+			writer.close();
+			//return null;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public static Key importSymmetricKey(String filename)
+	{
+		 try 
+		 {
+			File file = new File(filename + ".symkey");
+			FileReader reader = new FileReader(file);
+			BufferedReader bufReader = new BufferedReader(reader);
+			
+			bufReader.readLine();
+			String strKey = bufReader.readLine();
+			Key key = stringToKey(strKey,"AES");
+				
+			bufReader.close();
+			return key;
+		} 
+		 catch (IOException e) 
+		 {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	
 	
 	public static String keyToString(Key key)
 	{
