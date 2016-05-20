@@ -1,7 +1,9 @@
 package MailClient;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Properties;
 import java.util.Vector;
 
@@ -16,6 +18,10 @@ import javax.mail.internet.*;
 
 public class MailClient {
 
+	private static String FolderPart = "";
+	private static String IMAP = "imap";
+	private static Store store;
+	private static Session emailSession;
 	private static class Person
 	{
 		public String username;
@@ -40,6 +46,54 @@ public class MailClient {
 		}
 	}
 	
+	public static String getCurrentDirectory()
+	{
+		return System.getProperty("user.dir") + "\\";
+	}
+	
+	public static void setPlaceDirectory (String dir)
+	{
+		FolderPart = dir;
+	}
+	
+	public static String CreateFolderUser (String dir) //Địa chỉ tương đối
+	{
+		File Folder = new File("users");
+		if (!Folder.exists())
+		{
+			if (Folder.mkdir())
+			{
+				System.out.println("Create Folder Successfull");
+			}
+			else
+			{
+				System.out.println("Fail to create new folder!");
+			}
+		}
+		dir = getCurrentDirectory() + "users\\" + dir;
+		File FolderUser = new File(dir);
+		if (!FolderUser.exists())
+		{
+			if (FolderUser.mkdir())
+			{
+				System.out.println("Create Folder Successfull");
+			}
+			else
+			{
+				System.out.println("Fail to create new folder!");
+			}
+		}
+		return dir;
+	}
+	
+	public static String SeparatorUsername(String username) // Trả về tên folder
+	{
+		String FolderName = "";
+		int index = username.indexOf(".com");
+		FolderName = username.substring(0, index);
+		return FolderName;
+	}
+	
 	private static class MailContent
 	{
 		public Vector<String> recveivers;
@@ -53,7 +107,6 @@ public class MailClient {
 		
 		MailContent()
 		{
-			// null het
 			this.recveivers = new Vector<String>();
 			this.cc = new Vector<String>();
 			this.bcc = new Vector<String>();
@@ -74,6 +127,7 @@ public class MailClient {
 			this.cc.addElement(name);
 		}
 		
+		@SuppressWarnings("unused")
 		public void addBCC(String name)
 		{
 			this.bcc.addElement(name);
@@ -128,76 +182,127 @@ public class MailClient {
 	
 	public static void main(String[] args) throws IOException
 	{
-		Person sender = new Person("ipmanxjackiechan@gmail.com","123a4567bcd");
-		//Person receiver = new Person("testmailclient126@gmail.com");
-		String host = "pop.gmail.com";
-		MailContent mailContent = new MailContent();
+		String username = "", password = "";
+		// Mốt dùng đừng xóa nhé
+		/*BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+		System.out.print("Input username: ");
+		username = reader.readLine();
+		System.out.print("Input password: ");
+		password = reader.readLine();*/
+		username = "ipmanxjackiechan@gmail.com";
+		password = "123a4567bcd";
+		Person sender = new Person(username, password);
+		String host = IMAP + ".gmail.com";
+		//System.out.println(getCurrentDirectory());
+		String foldername = CreateFolderUser(SeparatorUsername(sender.username));
+		setPlaceDirectory(foldername);
+		System.out.println(foldername);
+		DeleteRemote(sender, host);
+		//fetchMail(sender, host);
+		/*MailContent mailContent = new MailContent();
 		mailContent.setTitle("F*ck Cong again!");
-		mailContent.setContent("F*ck you nln");
+		mailContent.setContent("Yêu gái nhiều nln\nNgày mai đi chơi nhé :3");
 		mailContent.setHost(host);
-		mailContent.addReceiver("zzzthanhcongzzz@gmail.com");
+		//mailContent.addReceiver("zzzthanhcongzzz@gmail.com");
 		mailContent.addReceiver("nduytg@gmail.com");
 		mailContent.addReceiver("testmailclient126@gmail.com");
 		mailContent.addCC("ipmansuper@gmail.com");
 		
-		String storeType = "pop3";
+		String storeType = IMAP;
 		
-		MailClient.fetchMail(sender, host, storeType);
-		//MailClient.sendMail(sender, mailContent);
+		MailClient.sendMail(sender, mailContent);*/
 		//mailContent.recveiver.
 		
 		//MailClient.checkMail(sender, "smtp.gmail.com");
 		
-		
-		//MyCrypto cryptoHandler = new MyCrypto();
-		//cryptoHandler.digestMessage("HelloWorld", "SHA-1");
-		//String mode = "AES";
-		//int keySize = 256;
-		//String key = cryptoHandler.createSymmetricKey(keySize, mode);
-		//cryptoHandler.importSymmetricKey(key, mode);
-		//cryptoHandler.encryptMessage(MyCrypto.stringToKey(key), "Hi, I'm Duy ^^");
 	}
 	
-	public static void fetchMail(Person acc, String host, String storeType)
+	public static void GetSessionObject(Person acc, String host)
+	{
+		try
+		{
+			Properties pros = new Properties();
+			pros.put("mail.store.protocol", IMAP);
+			pros.put("mail." + IMAP + ".host", host); // để test thôi nên sửa imap
+			pros.put("mail." + IMAP + ".port", "993");
+			pros.put("mail." + IMAP + ".starttls.enable", "true");
+			
+			Session emailSession = Session.getDefaultInstance(pros);
+			
+			store = emailSession.getStore(IMAP + "s");
+			store.connect(host, acc.username, acc.password);	
+		}
+		catch (NoSuchProviderException e){
+			e.printStackTrace();
+		}
+		catch (MessageRemovedException e){
+			e.printStackTrace();
+		}
+		catch (Exception e){
+			e.printStackTrace();
+		}
+	}
+	
+	public static void fetchMail(Person acc, String host)
 	{
 		System.out.println("Fetching mail.....\nPlease wait....");
 		try
 		{
-			Properties properties = new Properties();
-			properties.put("mail.store.protocol", storeType);
-			properties.put("mail.pop3.host", host); // để test thôi nên sửa imap
-			properties.put("mail.pop3.port", "995");
-			properties.put("mail.pop3.starttls.enable", "true");
-			
-			Session emailSession = Session.getDefaultInstance(properties);
-	        // emailSession.setDebug(true);
-
-	        // create the POP3 store object and connect with the pop server
-	        Store store = emailSession.getStore("pop3s");
-
-	        store.connect(host, acc.username, acc.password);
-
-	        // Chọn đường dẫn folder lưu trữ mail
+			GetSessionObject(acc, host);
 	        Folder emailFolder = store.getFolder("INBOX");
 	        emailFolder.open(Folder.READ_ONLY);
 
-	        BufferedReader reader = new BufferedReader(new InputStreamReader(
-		     System.in));
+	        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
 	        // retrieve the messages from the folder in an array and print it
 	        Message[] messages = emailFolder.getMessages();
 	        System.out.println("messages.length---" + messages.length);
 
 	        for (int i = 0; i < messages.length; i++) {
+	           
 	           Message message = messages[i];
-	           System.out.println("---------------------------------");
-	           writePart(message);
+	           File fmail = new File(FolderPart + "\\" + message.getMessageNumber() + ".mail");
+		       PrintWriter in = new PrintWriter(fmail, "UTF-8");
+	           
+	           in.println("---------------------------------");
+	           //message.getMessageNumber();
+	           //Đọc từ danh sách file local lên tìm có mail ko nếu ko thì hãy tải (dò theo numberMessage
+	           
+	           int type = writePart(message, in); //Xét xem là kiểu message gì
+	           if (type == 2) //Nếu multipart thì vào đây (Attachment)
+	           {
+	        	  String attachFiles = "", messageContent = "";
+	        	  Multipart multimsg = (Multipart)message.getContent();
+	        	  int numberOfPart = multimsg.getCount();
+	        	  for (int CountPart = 0; CountPart < numberOfPart; CountPart++)
+	        	  {
+	        		  MimeBodyPart Part = (MimeBodyPart) multimsg.getBodyPart(CountPart);
+	        		  if (Part.ATTACHMENT.equalsIgnoreCase(Part.getDisposition()))	// Kiểm tra xem có phải là Attachment hay ko để tải về
+	        		  {
+	        			  String fileName = Part.getFileName();
+	        			  String temp = "" + message.getMessageNumber();
+	        			  File attachfolder = new File(FolderPart + "\\" + temp);
+	        			  attachfolder.mkdir();
+	        			  Part.saveFile(FolderPart + "\\" + temp + "\\" + File.separator + fileName);
+	        		  }
+	        		  else
+	        		  {
+	        			  // Phần chứa nội dung file
+	        			  messageContent = Part.getContent().toString();
+	        		  }
+	        	  }
+	        	  if (attachFiles.length() > 1)
+	        	  {
+	        		  attachFiles = attachFiles.substring(0, attachFiles.length() - 2);
+	        	  }
+	           }
 	           String line = reader.readLine();
 	           if ("YES".equals(line)) {
 	              message.writeTo(System.out);
 	           } else if ("QUIT".equals(line)) {
 	              break;
 	           }
+	           in.close();
 	        }
 
 	        // close the store and folder objects
@@ -218,17 +323,100 @@ public class MailClient {
 		}
 	}
 	
+	public static void DeleteLocal(Person acc)
+	{
+		
+	}
+	
+	public static void DeleteRemote(Person acc, String host)
+	{
+		GetSessionObject(acc, host);
+		Folder emailFolder;
+		try {
+			emailFolder = store.getFolder("INBOX");
+			emailFolder.open(Folder.READ_WRITE);
+
+	        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+	        // retrieve the messages from the folder in an array and print it
+	        Message[] messages = emailFolder.getMessages();
+	        //Nhận mail xong dò với number cần xóa nằm trong danh sách lưu hiện tại trên local máy
+	        System.out.print("Input quantity message you want to delete: ");
+	        int numDelete = Integer.parseInt(reader.readLine());
+	        for (int i = 0; i < numDelete; i++)
+	        {
+		        System.out.print("Input id message you want to delete: ");
+				int id = Integer.parseInt(reader.readLine());
+				System.out.print("Do you want to delete this message [y/n]: ");
+				String ans = reader.readLine();
+				if ("Y".equals(ans) || "y".equals(ans))
+				{
+					messages[id - 1].setFlag(Flags.Flag.DELETED, true);
+				}
+				else if ("N".equals(ans) || "n".equals(ans))
+					break;
+	        }
+	        
+	        emailFolder.close(true);
+	        store.close();
+	        System.out.println("Deleted successful");
+		} catch (MessagingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NumberFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public static void DeleteMail(Person acc, String host)
+	{
+		System.out.println("Lua chon phuong thuc xoa:");
+		System.out.println(" 1. Xoa Local");
+		System.out.println(" 2. Xoa Remote");
+		System.out.println(" 3. Xoa ca hai");
+		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+		int Choose = 0;
+		try {
+			Choose = Integer.parseInt(reader.readLine());
+			switch (Choose)
+			{
+				case 1:
+				{
+					DeleteLocal(acc);
+					break;
+				}
+				case 2:
+				{
+					DeleteRemote(acc, host);
+					break;
+				}
+				case 3:
+				{
+					DeleteRemote(acc, host);
+					DeleteLocal(acc);
+					break;
+				}
+			}
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public static void checkMail(Person acc, String host)
 	{
 		try 
 		{
 			System.out.println("Checking mail.....\nPlease wait....");
 			Properties props = new Properties();
-			props.put("mail.pop3.host", host);
-			props.put("mail.pop3.port", "995");		//POP3
-			//props.put("mail.imap.host", host);	//IMAP
-			//props.put("mail.imap.port", "993");
-			props.put("mail.pop3.starttls.enable", "true");
+			props.put("mail." + IMAP + ".host", host);
+			props.put("mail." + IMAP + ".port", "993");		
+			props.put("mail." + IMAP + ".starttls.enable", "true");
 			  
 			Session session = Session.getDefaultInstance(props);
 			Store store = session.getStore("pop3s");
@@ -242,12 +430,9 @@ public class MailClient {
 			Message message[] = folder.getMessages();
 			for(int i=0; i < message.length; i++)
 			{
-				System.out.println("Mail #" + (i+1));
-				//message[i].ge
+				System.out.println("Mail #" + (i + 1));
 				System.out.println("From: " + message[i].getFrom()[0].toString());
 				System.out.println("Subject: " + message[i].getSubject() + "\n");
-				//System.out.println("Content:\n" + message[i].getContent());
-				//message[i].get
 			}
 			
 			folder.close(false);
@@ -300,7 +485,7 @@ public class MailClient {
 			//CC
 			for(int i=0; i < mailContent.cc.size(); i++)
 			{
-				if (mailContent.cc.get(i) != null) // Em này đang chết
+				if (mailContent.cc.get(i) != null)
 				{
 					message.addRecipients(Message.RecipientType.CC, InternetAddress.parse(mailContent.cc.get(i)));
 				}
@@ -311,8 +496,6 @@ public class MailClient {
 			{
 				message.addRecipients(Message.RecipientType.BCC, InternetAddress.parse(mailContent.bcc.get(i)));
 			}
-			//message.setRecipients(Message.RecipientType.TO,
-				//InternetAddress.parse(receiver.username));
 			message.setSubject(mailContent.getTitle());
 			
 			
@@ -339,7 +522,6 @@ public class MailClient {
 			
 			// 1 list DataSource cho 1 list file đính kèm
 			numFile = mailContent.getSizeListFile();
-			//attachBodyPart.setSize(numFile);
 			
 			// Multipart for attach file
 			Multipart multipart = new MimeMultipart();
@@ -361,7 +543,6 @@ public class MailClient {
 			transport.connect(mailContent.getHost(), username, password);
 			transport.send(message);
 			
-			//transport.sendMessage(arg0, arg1);
 			transport.close();
 
 			System.out.println("Done");
@@ -384,41 +565,47 @@ public class MailClient {
 	   * 5: image/ (don't have extension)
 	   * tạm thời return như trên lúc làm có thêm return tiếp
 	   */
-	   public static int writePart(Part p) throws Exception {
+	   public static int writePart(Part p, PrintWriter in) throws Exception {
 	      if (p instanceof Message)
 	         //Call methos writeEnvelope
-	         writeEnvelope((Message) p);
-
+	         writeEnvelope((Message) p, in);
+	      
 	      System.out.println("----------------------------");
 	      System.out.println("CONTENT-TYPE: " + p.getContentType());
-
+	      if (p.getContentType().contains("name="))
+	      {
+	    	  in.println("Files Attachment: ");
+	    	  String FileNameAttach = p.getContentType().substring(p.getContentType().indexOf("name=") + 5, p.getContentType().length());
+	    	  in.println (FileNameAttach);
+	      }
+	      
 	      //check if the content is plain text
 	      if (p.isMimeType("text/plain")) {
-	         System.out.println("This is plain text");
-	         System.out.println("---------------------------");
-	         System.out.println((String) p.getContent());
+	         in.println("This is plain text");
+	         in.println("---------------------------");
+	         in.println((String) p.getContent());
 	         return 1;
 	      } 
 	      //check if the content has attachment
 	      else if (p.isMimeType("multipart/*")) {
-	         System.out.println("This is a Multipart");
-	         System.out.println("---------------------------");
+	    	 System.out.println("This is a Multipart");
+	    	 System.out.println("---------------------------");
 	         Multipart mp = (Multipart) p.getContent();
 	         int count = mp.getCount();
 	         for (int i = 0; i < count; i++)
-	            writePart(mp.getBodyPart(i));
+	            writePart(mp.getBodyPart(i), in);
 	         return 2;
 	      } 
 	      //check if the content is a nested message
 	      else if (p.isMimeType("message/rfc822")) {
-	         System.out.println("This is a Nested Message");
+	    	 System.out.println("This is a Nested Message");
 	         System.out.println("---------------------------");
-	         writePart((Part) p.getContent());
+	         writePart((Part) p.getContent(), in);
 	         return 3;
 	      } 
 	      //check if the content is an inline image
 	      else if (p.isMimeType("image/jpeg")) {
-	         System.out.println("--------> image/jpeg");
+	    	  System.out.println("--------> image/jpeg");
 	         Object o = p.getContent();
 
 	         InputStream x = (InputStream) o;
@@ -437,7 +624,7 @@ public class MailClient {
 	         return 4;
 	      } 
 	      else if (p.getContentType().contains("image/")) {
-	         System.out.println("content type" + p.getContentType());
+	    	 System.out.println("content type" + p.getContentType());
 	         File f = new File("image" + new Date().getTime() + ".jpg");
 	         DataOutputStream output = new DataOutputStream(
 	            new BufferedOutputStream(new FileOutputStream(f)));
@@ -454,18 +641,18 @@ public class MailClient {
 	      else {
 	         Object o = p.getContent();
 	         if (o instanceof String) {
-	            System.out.println("This is a string");
+	        	 System.out.println("This is a string");
 	            System.out.println("---------------------------");
 	            System.out.println((String) o);
 	         } 
 	         else if (o instanceof InputStream) {
-	            System.out.println("This is just an input stream");
+	        	System.out.println("This is just an input stream");
 	            System.out.println("---------------------------");
 	            InputStream is = (InputStream) o;
 	            is = (InputStream) o;
 	            int c;
 	            while ((c = is.read()) != -1)
-	               System.out.write(c);
+	            	System.out.write(c);
 	         } 
 	         else {
 	            System.out.println("This is an unknown type");
@@ -478,7 +665,7 @@ public class MailClient {
 	   /*
 	   * This method would print FROM,TO and SUBJECT of the message
 	   */
-	   public static void writeEnvelope(Message m) throws Exception {
+	   public static void writeEnvelope(Message m, PrintWriter in) throws Exception {
 	      System.out.println("This is the message envelope");
 	      System.out.println("---------------------------");
 	      Address[] a;
@@ -486,18 +673,18 @@ public class MailClient {
 	      // FROM
 	      if ((a = m.getFrom()) != null) {
 	         for (int j = 0; j < a.length; j++)
-	         System.out.println("FROM: " + a[j].toString());
+	         in.println("FROM: " + a[j].toString().substring(a[j].toString().indexOf('<') + 1, a[j].toString().length() - 1));
 	      }
 
 	      // TO
 	      if ((a = m.getRecipients(Message.RecipientType.TO)) != null) {
 	         for (int j = 0; j < a.length; j++)
-	         System.out.println("TO: " + a[j].toString());
+	         in.println("TO: " + a[j].toString());
 	      }
 
 	      // SUBJECT
 	      if (m.getSubject() != null)
-	         System.out.println("SUBJECT: " + m.getSubject());
+	         in.println("SUBJECT: " + m.getSubject() + "\n\n");
 
 	   }
 }
