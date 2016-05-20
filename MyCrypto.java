@@ -4,17 +4,24 @@
 
 // 2 thư viện security cho java
 import java.security.*;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.DatatypeConverter;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.Cipher;
 
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.String;
 
@@ -23,6 +30,9 @@ public class MyCrypto
 	private String privateKey;
 	private String publicKey;
 	private String symmetricKey;
+	//Init vector luu cung, khoi can truyen qua lai
+	private String symmectricInitVector = "HelloDuyHelloDuy";
+	private String rsaInitVector = "HelloDuyHelloDuy";
 
 	public String digestMessage(String mess, String mode)
 	{
@@ -53,49 +63,6 @@ public class MyCrypto
 		System.out.println("Message digest: " + result);
 		return result;
 	}
-	
-	
-	// Tao symmetric key dung de ma hoa van ban
-	// Cai nay dung de tao random session key 
-	// cho mode Ket hop ma hoa doi xung va bat doi xung
-//	public String createSymmetricKey(int keySize, String mode)
-//	{
-//		String encodedKey = null;
-//		if(keySize <= 0)
-//		{
-//			System.out.println("Invalid key size, key size must be postive!");
-//			return encodedKey;
-//		}
-//		
-//		if(keySize < 128)
-//		{
-//			System.out.println("Warning: Key size is less than 128 bits!");	
-//		}
-//		
-//		try 
-//		{
-//			// Khoi tao key!
-//			KeyGenerator keyGen = KeyGenerator.getInstance(mode);
-//			keyGen.init(keySize);
-//			Key key = keyGen.generateKey();
-//			System.out.println("Algorithm: " + mode);
-//			System.out.println("Key generated: " + key.toString());
-//			System.out.println("Key Generation Completed!");
-//			
-//			//Encode lai thanh string de export ra
-//			//byte[] keyBytes = key.getEncoded();
-//			//encodedKey = new String(Base64.getEncoder().encode(keyBytes));
-//			encodedKey = keyToString(key);
-//			System.out.println("Your secret key: " + encodedKey);
-//			return encodedKey;
-//		} 
-//		catch (NoSuchAlgorithmException e) 
-//		{
-//			System.out.println("Only supported: DES, TripleDES, AES, RC2, RC4, RC5, Blowfish, PBE.");
-//			e.printStackTrace();
-//		}
-//		return encodedKey;
-//	}
 	
 	// Algorithm: AES
 	// Mode: CBC
@@ -162,17 +129,59 @@ public class MyCrypto
 		return null;
 	}
 	
-	
-	public static String AsymEncryptMessage(String key, String initVector, String message)
+	public static String encrypRSAMessage(PublicKey key, String initVector, String message)
 	{
-		return "";
+		try 
+		{
+			IvParameterSpec iv = new IvParameterSpec(initVector.getBytes("UTF-8"));
+
+			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+			cipher.init(Cipher.ENCRYPT_MODE, key);
+			
+			byte[] cipherBytes = cipher.doFinal(message.getBytes());
+			String cipherText = new String(Base64.getEncoder().encode(cipherBytes));
+			System.out.println("Encrypted Message: " + cipherText);
+			
+			return cipherText;	
+		} 
+		catch (UnsupportedEncodingException | NoSuchPaddingException | NoSuchAlgorithmException | 
+		InvalidKeyException | IllegalBlockSizeException | BadPaddingException e)
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		System.out.println("RSA Encryption failed!");
+		return null;
 	}
 	
-	public static String AsymDecryptMessage(String key, String initVector, String cipherText)
+	public static String decryptRSAMessage(PrivateKey key, String initVector, String cipherText)
 	{
-		return "";
+		try 
+		{
+			IvParameterSpec iv = new IvParameterSpec(initVector.getBytes("UTF-8"));
+			
+			
+			//SecretKeySpec keySpec = new SecretKeySpec(key.getBytes("UTF-8"),"AES");
+			Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1PADDING");
+			cipher.init(Cipher.DECRYPT_MODE, key);
+			
+			byte[] plainBytes = cipher.doFinal(Base64.getDecoder().decode(cipherText));
+			String plainText = new String(plainBytes);
+			System.out.println("Decrypted Message: " + plainText);
+			
+			return plainText;
+		}
+		catch (NoSuchAlgorithmException | BadPaddingException | InvalidKeyException | NoSuchPaddingException |
+				UnsupportedEncodingException | IllegalBlockSizeException e)
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		
+		
+		System.out.println("RSA Encryption failed!");
+		return null;
 	}
-	
 	
 	// Generate 2048-bit RSA Key Pair
 	public static KeyPair createRSAKeyPair()
@@ -181,11 +190,12 @@ public class MyCrypto
 		{
 			System.out.println("Generating RSA Key pair....");
 			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+			//  2048 bits
 			keyGen.initialize(2048);
 			KeyPair keyPair = keyGen.generateKeyPair();
 			System.out.println("RSA key pair has been completed! ^^");
 			System.out.println("Private Key: " + keyToString(keyPair.getPrivate()));
-			System.out.println("Public Key: " + keyPair.getPublic());
+			System.out.println("Public Key: " + keyToString(keyPair.getPublic()));
 			return keyPair;
 		} 
 		catch (NoSuchAlgorithmException e) 
@@ -197,14 +207,37 @@ public class MyCrypto
 		return null;
 	}
 	
-	 public static void exportRSAtoXML(KeyPair keypair, String filename)
-	 {
-		
-		try {
-			ObjectOutputStream outputStream;
-			outputStream = new ObjectOutputStream(new FileOutputStream(filename));
-			outputStream.writeObject(keypair);
-			outputStream.close();
+	// public static void exportRSAPublic
+	// ghi xuong file Pem
+	public static void exportRSAKeyPair(KeyPair keypair, String filename)
+	{
+		try
+		{
+			File keyPairFile = new File(filename);
+			
+			// File nay chua ca private key va public key
+			if (keyPairFile.getParentFile() != null) 
+			{
+			keyPairFile.getParentFile().mkdirs();
+			}
+			keyPairFile.createNewFile();
+
+			String temp;
+			//ObjectOutputStream outputStream;
+			//outputStream = new ObjectOutputStream(new FileOutputStream(keyPairFile));
+			//outputStream.flush();
+			PrintWriter writer = new PrintWriter(keyPairFile);
+			
+			temp = "-----BEGIN RSA PUBLIC KEY-----\n" + keyToString(keypair.getPublic()) +
+	          "\n-----END RSA PUBLIC KEY-----\n";
+			writer.println(temp);
+			
+			temp = "-----BEGIN RSA PRIVATE KEY-----\n" + keyToString(keypair.getPrivate()) + 
+					"\n-----END RSA PRIVATE KEY-----\n";
+			writer.println(temp);
+			
+			writer.close();
+			
 		}
 		catch (FileNotFoundException e) 
 		{
@@ -215,21 +248,37 @@ public class MyCrypto
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
-	 }
-	
-	public void importRSAKeyPair()
-	{
-		
 	}
-	
-	public void importRSAPrivate()
+	 
+	 
+	public static KeyPair importRSAKeyPair(String filename)
 	{
-		
-	}
-	
-	public void importRSAPublic()
-	{
-		
+		 try 
+		 {
+			File file = new File(filename);
+			FileReader reader = new FileReader(file);
+			BufferedReader bufReader = new BufferedReader(reader);
+			bufReader.readLine();
+			
+			String strKey = bufReader.readLine();
+			PublicKey pubKey = stringToPubKey(strKey);
+			
+			bufReader.readLine();
+			bufReader.readLine();
+			bufReader.readLine();
+			
+			strKey = bufReader.readLine();
+			PrivateKey pvtKey = stringToPrivateKey(strKey);
+			KeyPair keyPair = new KeyPair(pubKey,pvtKey);
+			bufReader.close();
+			return keyPair;
+		} 
+		 catch (IOException e) 
+		 {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	public static String keyToString(Key key)
@@ -253,6 +302,44 @@ public class MyCrypto
 			e.printStackTrace();
 		}
 		return key;
+	}
+	
+	public static PublicKey stringToPubKey(String strKey)
+	{
+		byte[] publicBytes = Base64.getDecoder().decode(strKey);
+		X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
+		KeyFactory keyFactory;
+		
+		try {
+			keyFactory = KeyFactory.getInstance("RSA");
+			PublicKey pubKey = keyFactory.generatePublic(keySpec);
+			return pubKey;
+		} 
+		catch (NoSuchAlgorithmException | InvalidKeySpecException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public static PrivateKey stringToPrivateKey(String strKey)
+	{
+		byte[] publicBytes = Base64.getDecoder().decode(strKey);
+		PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(publicBytes);
+		KeyFactory keyFactory;
+		
+		try {
+			keyFactory = KeyFactory.getInstance("RSA");
+			PrivateKey prvKey = keyFactory.generatePrivate(keySpec);
+			return prvKey;
+		} 
+		catch (NoSuchAlgorithmException | InvalidKeySpecException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	
