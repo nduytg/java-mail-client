@@ -1,6 +1,7 @@
 package MailClient;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -178,7 +179,6 @@ public class MailClient {
 			return this.fileList.get(i);
 		}
 	}
-
 	
 	public static void main(String[] args) throws IOException
 	{
@@ -197,8 +197,10 @@ public class MailClient {
 		String foldername = CreateFolderUser(SeparatorUsername(sender.username));
 		setPlaceDirectory(foldername);
 		System.out.println(foldername);
-		DeleteRemote(sender, host);
-		//fetchMail(sender, host);
+		//DeleteMail(sender, host);
+		//DeleteLocal(sender);
+		//DeleteRemote(sender, host);
+		fetchMail(sender, host);
 		/*MailContent mailContent = new MailContent();
 		mailContent.setTitle("F*ck Cong again!");
 		mailContent.setContent("Yêu gái nhiều nln\nNgày mai đi chơi nhé :3");
@@ -223,7 +225,7 @@ public class MailClient {
 		{
 			Properties pros = new Properties();
 			pros.put("mail.store.protocol", IMAP);
-			pros.put("mail." + IMAP + ".host", host); // để test thôi nên sửa imap
+			pros.put("mail." + IMAP + ".host", host);
 			pros.put("mail." + IMAP + ".port", "993");
 			pros.put("mail." + IMAP + ".starttls.enable", "true");
 			
@@ -249,65 +251,76 @@ public class MailClient {
 		try
 		{
 			GetSessionObject(acc, host);
-	        Folder emailFolder = store.getFolder("INBOX");
-	        emailFolder.open(Folder.READ_ONLY);
-
-	        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-
-	        // retrieve the messages from the folder in an array and print it
-	        Message[] messages = emailFolder.getMessages();
-	        System.out.println("messages.length---" + messages.length);
-
-	        for (int i = 0; i < messages.length; i++) {
-	           
-	           Message message = messages[i];
-	           File fmail = new File(FolderPart + "\\" + message.getMessageNumber() + ".mail");
-		       PrintWriter in = new PrintWriter(fmail, "UTF-8");
-	           
-	           in.println("---------------------------------");
-	           //message.getMessageNumber();
-	           //Đọc từ danh sách file local lên tìm có mail ko nếu ko thì hãy tải (dò theo numberMessage
-	           
-	           int type = writePart(message, in); //Xét xem là kiểu message gì
-	           if (type == 2) //Nếu multipart thì vào đây (Attachment)
-	           {
-	        	  String attachFiles = "", messageContent = "";
-	        	  Multipart multimsg = (Multipart)message.getContent();
-	        	  int numberOfPart = multimsg.getCount();
-	        	  for (int CountPart = 0; CountPart < numberOfPart; CountPart++)
-	        	  {
-	        		  MimeBodyPart Part = (MimeBodyPart) multimsg.getBodyPart(CountPart);
-	        		  if (Part.ATTACHMENT.equalsIgnoreCase(Part.getDisposition()))	// Kiểm tra xem có phải là Attachment hay ko để tải về
-	        		  {
-	        			  String fileName = Part.getFileName();
-	        			  String temp = "" + message.getMessageNumber();
-	        			  File attachfolder = new File(FolderPart + "\\" + temp);
-	        			  attachfolder.mkdir();
-	        			  Part.saveFile(FolderPart + "\\" + temp + "\\" + File.separator + fileName);
-	        		  }
-	        		  else
-	        		  {
-	        			  // Phần chứa nội dung file
-	        			  messageContent = Part.getContent().toString();
-	        		  }
-	        	  }
-	        	  if (attachFiles.length() > 1)
-	        	  {
-	        		  attachFiles = attachFiles.substring(0, attachFiles.length() - 2);
-	        	  }
-	           }
-	           String line = reader.readLine();
-	           if ("YES".equals(line)) {
-	              message.writeTo(System.out);
-	           } else if ("QUIT".equals(line)) {
-	              break;
-	           }
-	           in.close();
-	        }
-
-	        // close the store and folder objects
-	        emailFolder.close(false);
-	        store.close();
+			
+			BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));			
+		        Folder emailFolder = store.getFolder("INBOX");
+		        emailFolder.open(Folder.READ_ONLY);
+	
+		        // retrieve the messages from the folder in an array and print it
+		        Message[] messages = emailFolder.getMessages();
+		        System.out.println("messages.length---" + messages.length);
+	
+		        for (int i = 0; i < messages.length; i++) {
+		           
+		           Message message = messages[i];
+		           
+		           File fmail = new File(FolderPart + "\\" + message.getMessageNumber() + " " +  message.getSentDate().getTime() + ".mail");
+		           if (!fmail.exists())
+		           {
+		        	   System.out.println("File isn't existing");
+				       PrintWriter in = new PrintWriter(fmail, "UTF-8");
+			           in.println("---------------------------------");
+			           
+			           //Đọc từ danh sách file local lên tìm có mail ko nếu ko thì hãy tải (dò theo numberMessage
+			           
+			           int type = writePart(message, in); //Xét xem là kiểu message gì
+			           if (type == 2) //Nếu multipart thì vào đây (Attachment)
+			           {
+			        	  String attachFiles = "", messageContent = "";
+			        	  Multipart multimsg = (Multipart)message.getContent();
+			        	  int numberOfPart = multimsg.getCount();
+			        	  for (int CountPart = 0; CountPart < numberOfPart; CountPart++)
+			        	  {
+			        		  MimeBodyPart Part = (MimeBodyPart) multimsg.getBodyPart(CountPart);
+			        		  if (Part.ATTACHMENT.equalsIgnoreCase(Part.getDisposition()) || Part.getContentType().contains("IMAGE/"))	// Kiểm tra xem có phải là Attachment hay ko để tải về
+			        		  {
+			        			  String fileName = Part.getFileName();
+			        			  String temp = "" + message.getMessageNumber() + " " + message.getSentDate().getTime();
+			        			  File attachfolder = new File(FolderPart + "\\" + temp);
+			        			  attachfolder.mkdirs();
+			        			  Part.saveFile(FolderPart + "\\" + temp + "\\" + File.separator + fileName);
+			        		  }
+			        		  else
+			        		  {
+			        			  // Phần chứa nội dung file
+			        			  messageContent = Part.getContent().toString();
+			        		  }
+			        	  }
+			        	  if (attachFiles.length() > 1)
+			        	  {
+			        		  attachFiles = attachFiles.substring(0, attachFiles.length() - 2);
+			        	  }
+			           }
+			           
+			           in.close();
+		           }
+		           else
+		           {
+		        	   System.out.println("File is existing");
+		           }
+		           
+		           // Hỏi xem có tiếp tục tải hay là thoát đi ngủ
+		           String line = reader.readLine();
+		           if ("YES".equals(line)) {
+		              message.writeTo(System.out);
+		           } else if ("QUIT".equals(line)) {
+		              break;
+		           }
+	        	}
+		        reader.close();
+		        // close the store and folder objects
+		        emailFolder.close(false);
+		        store.close();
 		}
 		catch (NoSuchProviderException e){
 			e.printStackTrace();
@@ -325,12 +338,82 @@ public class MailClient {
 	
 	public static void DeleteLocal(Person acc)
 	{
-		
+		String PathfolderUser = getCurrentDirectory();
+		File Folder = new File(PathfolderUser + "\\users\\" + SeparatorUsername(acc.username));
+		File[] list = Folder.listFiles();
+		File[] listOfFiles = new File[list.length];
+		File[] listOfFolders = new File[list.length];
+		BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
+		int length = listOfFiles.length, numFiles = 0, k = 0;
+		for (int i = 0; i < length; i++)
+		{
+			if (list[i].isFile())
+			{
+				listOfFiles[numFiles] = list[i];
+				numFiles++;
+			}
+			else
+			{
+				listOfFolders[k] = list[i];
+				k++;
+			}
+		}
+		try {
+			String ans = "C";
+			while ("C".equals(ans) || "c".equals(ans))
+			{
+				System.out.print("Input index of message you want to delete: ");
+				int index = Integer.parseInt(input.readLine());
+				FileReader fread = new FileReader(listOfFiles[index].getPath());
+				BufferedReader instr = new BufferedReader(fread);
+				String line;
+				while ((line = instr.readLine()) != null)
+				{
+					System.out.println(line);
+				}
+				
+				System.out.print("Do you want to delete this file [y/n]: ");
+				ans = input.readLine();
+				if ("Y".equals(ans) || "y".equals(ans))
+				{
+					instr.close();
+					fread.close();
+					for (int i = 0; i < k; i++)
+					{
+						System.out.println(listOfFiles[index].getName().substring(0, listOfFiles[index].getName().indexOf('.')));
+						System.out.println(listOfFolders[i].getName());
+						if (listOfFolders[i].getName().equals(listOfFiles[index].getName().substring(0, listOfFiles[index].getName().indexOf('.'))))
+						{
+							File FolderAttachment = new File(listOfFolders[i].getPath());
+							File[] listAttachment = FolderAttachment.listFiles();
+							for (int numAttach = 0; numAttach < listAttachment.length; numAttach++)
+							{
+								listAttachment[numAttach].delete();
+							}
+							listOfFolders[i].delete();
+							break;
+						}
+					}
+					listOfFiles[index].delete();
+				}
+				
+				System.out.print("Do you continue [c/n]: ");
+				ans = input.readLine();
+				instr.close();
+				fread.close();
+			}
+			
+		} catch (NumberFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public static void DeleteRemote(Person acc, String host)
 	{
-		GetSessionObject(acc, host);
 		Folder emailFolder;
 		try {
 			emailFolder = store.getFolder("INBOX");
@@ -374,6 +457,7 @@ public class MailClient {
 	
 	public static void DeleteMail(Person acc, String host)
 	{
+		GetSessionObject(acc, host);
 		System.out.println("Lua chon phuong thuc xoa:");
 		System.out.println(" 1. Xoa Local");
 		System.out.println(" 2. Xoa Remote");
@@ -400,6 +484,11 @@ public class MailClient {
 					DeleteLocal(acc);
 					break;
 				}
+				default:
+					{
+						System.out.println("Error Syntax");
+						break;
+					}
 			}
 			
 		} catch (IOException e) {
@@ -685,6 +774,9 @@ public class MailClient {
 	      // SUBJECT
 	      if (m.getSubject() != null)
 	         in.println("SUBJECT: " + m.getSubject() + "\n\n");
-
+	      
+	      // Sent day
+	      if (m.getSentDate() != null)
+	    	 in.println ("Sent day: " + m.getSentDate() + "\n\n");
 	   }
 }
