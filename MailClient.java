@@ -178,19 +178,19 @@ public class MailClient {
 		//DeleteMail(sender, host);
 		//DeleteLocal(sender);
 		//DeleteRemote(sender, host);
-		fetchMail(sender, host);
-		/*MailContent mailContent = new MailContent();
+		//fetchMail(sender, host);
+		MailContent mailContent = new MailContent();
 		mailContent.setTitle("F*ck Cong again!");
-		mailContent.setContent("Yêu gái nhiều nln\nNgày mai đi chơi nhé :3");
+		mailContent.setContent("Yêu gái nhiều nln\nNgày mai đi chơi nhé :3\nSao lại sai được nhỉ");
 		mailContent.setHost(host);
 		//mailContent.addReceiver("zzzthanhcongzzz@gmail.com");
-		mailContent.addReceiver("nduytg@gmail.com");
+		//mailContent.addReceiver("nduytg@gmail.com");
 		mailContent.addReceiver("testmailclient126@gmail.com");
 		mailContent.addCC("ipmansuper@gmail.com");
 		
 		String storeType = IMAP;
 		
-		MailClient.sendMail(sender, mailContent);*/
+		MailClient.sendMail(sender, mailContent);
 		//mailContent.recveiver.
 		
 		//MailClient.checkMail(sender, "smtp.gmail.com");
@@ -392,6 +392,7 @@ public class MailClient {
 	
 	public static void DeleteRemote(Person acc, String host)
 	{
+		GetSessionObject(acc, host);
 		Folder emailFolder;
 		try {
 			emailFolder = store.getFolder("INBOX");
@@ -564,6 +565,7 @@ public class MailClient {
 				message.addRecipients(Message.RecipientType.BCC, InternetAddress.parse(mailContent.bcc.get(i)));
 			}
 			message.setSubject(mailContent.getTitle());
+			System.out.println(mailContent.getTitle());
 			
 			
 			// Message Body Part
@@ -571,13 +573,13 @@ public class MailClient {
 			
 			MimeBodyPart mainBodyPart = new MimeBodyPart();
 			mainBodyPart.setText(mailContent.getContent());
-			
+			System.out.println(mailContent.getContent());
 			// Message Attach Part
 			// Hỏi có đính kèm file không thì set null
 			DataInput in = new DataInputStream(System.in);
 			System.out.println("So luong file dinh kem");
 			int numFile = 0;
-			//numFile = Integer.parseInt(in.readLine());
+			numFile = Integer.parseInt(in.readLine());
 			// Nhập file đính kèm nếu số lượng là 0 thì là null
 			for (int i = 0; i < numFile; i++)
 			{
@@ -612,6 +614,7 @@ public class MailClient {
 			transport.send(message);
 			
 			transport.close();
+			props.clear();
 
 			System.out.println("Done");
 
