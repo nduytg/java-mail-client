@@ -1,3 +1,4 @@
+package mailClient;
 // Class xử lý việc bảo mật
 // Bao gồm những chức năng chính sau:
 // Mã hóa đối xứng, bất đối xứng, hàm băm, chữ ký điện tử
@@ -18,10 +19,8 @@ import javax.crypto.spec.IvParameterSpec;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.String;
@@ -32,7 +31,7 @@ public class MyCrypto
 	private String publicKey;
 	private String symmetricKey;
 	//Init vector luu cung, khoi can truyen qua lai
-	private String symmectricInitVector = "HelloDuyHelloDuy";
+	//private String symmectricInitVector = "HelloDuyHelloDuy";
 
 	public static String generateRandomIv(int keySize)
 	{
@@ -143,10 +142,6 @@ public class MyCrypto
 		try 
 		{
 			MessageDigest messDigest = MessageDigest.getInstance(mode);
-			
-			// print out the provider used
-		    //System.out.println( "\nKey provided by\n" + messDigest.getProvider().getInfo() );
-			
 		    //digest message and return
 		    messDigest.update(plaintext);
 		    result = new String (messDigest.digest());

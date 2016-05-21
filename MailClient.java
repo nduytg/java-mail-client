@@ -1,10 +1,10 @@
-package MailClient;
+package mailClient;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.util.ArrayList;
+//import java.nio.file.Files;
+//import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+//import java.util.List;
 import java.util.Properties;
 import java.util.Vector;
 
@@ -19,33 +19,11 @@ import javax.mail.internet.*;
 
 public class MailClient {
 
-	private static String FolderPart = "";
-	private static String IMAP = "imap";
-	private static Store store;
-	private static Session emailSession;
-	private static class Person
-	{
-		public String username;
-		public String password;
-		
-		Person()
-		{
-			username = new String("");
-			password = new String("");
-		}
-		
-		Person(String user, String pass)
-		{
-			username = new String(user);
-			password = new String(pass);
-		}
-		
-		Person(String user)
-		{
-			username = new String(user);
-			password = new String("");
-		}
-	}
+	public static String FolderPart = "";
+	public static String IMAP = "imap";
+	public static Store store;
+	public static Session emailSession;
+	
 	
 	public static String getCurrentDirectory()
 	{
