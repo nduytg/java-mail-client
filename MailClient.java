@@ -73,7 +73,7 @@ public class MailClient {
 		return FolderName;
 	}
 	
-	private static class MailContent
+	public static class MailContent
 	{
 		public Vector<String> recveivers;
 		public Vector<String> cc;
@@ -576,7 +576,8 @@ public class MailClient {
 			// Hỏi có đính kèm file không thì set null
 			DataInput in = new DataInputStream(System.in);
 			System.out.println("So luong file dinh kem");
-			int numFile = Integer.parseInt(in.readLine());
+			int numFile = 0;
+			//numFile = Integer.parseInt(in.readLine());
 			// Nhập file đính kèm nếu số lượng là 0 thì là null
 			for (int i = 0; i < numFile; i++)
 			{

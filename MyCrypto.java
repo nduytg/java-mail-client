@@ -31,7 +31,7 @@ public class MyCrypto
 	private String publicKey;
 	private String symmetricKey;
 	//Init vector luu cung, khoi can truyen qua lai
-	//private String symmectricInitVector = "HelloDuyHelloDuy";
+	public static String initVector = "HelloDuyHelloDuy";
 
 	public static String generateRandomIv(int keySize)
 	{
