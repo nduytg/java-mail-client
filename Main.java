@@ -56,15 +56,15 @@ import java.lang.reflect.Array;
 
 public class Main extends JFrame {
 
-	private JPanel contentPane;
-	private JTextField txtUsername;
-	private JPasswordField passwordField;
-	private JTable table;
-	private JTextField toField;
-	private JTextField ccField;
-	private JTextField bccField;
-	private JTextField txtInbox;
-	private JTable inbox;
+	private static JPanel contentPane;
+	private static JTextField txtUsername;
+	private static JPasswordField passwordField;
+	private static JTable table;
+	private static JTextField toField;
+	private static JTextField ccField;
+	private static JTextField bccField;
+	private static JTextField txtInbox;
+	private static JTable inbox;
 	private static String username, password;
 	private static boolean isRun = false;
 	private static Message localMessage[];
@@ -173,7 +173,7 @@ public class Main extends JFrame {
 		scrollPane_2.setBounds(10, 89, 432, 227);
 		panel_1.add(scrollPane_2);
 		
-		JTextArea textArea_1 = new JTextArea();
+		final JTextArea textArea_1 = new JTextArea();
 		textArea_1.setLineWrap(true);
 		scrollPane_2.setViewportView(textArea_1);
 		
@@ -237,16 +237,41 @@ public class Main extends JFrame {
 		inbox.setCellSelectionEnabled(true);
 		
 		JButton btnXa = new JButton("Local");
+		
+		// Delete local
+		btnXa.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				Person sender = new Person(username, password);
+				MailClient.DeleteLocal(sender);
+			}
+		});
 		btnXa.setFont(new Font("Tahoma", Font.PLAIN, 11));
 		btnXa.setBounds(88, 240, 69, 23);
 		panel_2.add(btnXa);
 		
+		// Delete Remote
 		JButton btnServer = new JButton("Server");
+		btnServer.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				Person sender = new Person(username, password);
+				String host = "imap.gmail.com";
+				MailClient.DeleteRemote(sender, host);
+			}
+		});
 		btnServer.setFont(new Font("Tahoma", Font.PLAIN, 11));
 		btnServer.setBounds(167, 240, 69, 23);
 		panel_2.add(btnServer);
 		
+		// Delete Both
 		JButton btnBoth = new JButton("Both");
+		btnBoth.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Person sender = new Person(username, password);
+				String host = "imap.gmail.com";
+				MailClient.DeleteLocal(sender);
+				MailClient.DeleteRemote(sender, host);
+			}
+		});
 		btnBoth.setFont(new Font("Tahoma", Font.PLAIN, 11));
 		btnBoth.setBounds(246, 240, 69, 23);
 		panel_2.add(btnBoth);
@@ -266,7 +291,7 @@ public class Main extends JFrame {
 		btnCheckMail.setBounds(202, 206, 101, 23);
 		panel_2.add(btnCheckMail);
 		
-		JPanel panel = new JPanel();
+		final JPanel panel = new JPanel();
 		panel.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
 		panel.setBounds(79, 577, 248, 105);
 		contentPane.add(panel);
@@ -296,6 +321,7 @@ public class Main extends JFrame {
 			{
 				username = new String(txtUsername.getText());
 				password =  new String(passwordField.getPassword());
+	
 				if(username != null && password != null)
 					isRun = true;
 				else
@@ -378,7 +404,7 @@ public class Main extends JFrame {
 		scrollPane.setBounds(215, 143, 237, 120);
 		panel_4.add(scrollPane);
 		
-		JTextArea textArea_2 = new JTextArea();
+		final JTextArea textArea_2 = new JTextArea();
 		scrollPane.setViewportView(textArea_2);
 		textArea_2.setWrapStyleWord(true);
 		textArea_2.setLineWrap(true);
@@ -399,7 +425,7 @@ public class Main extends JFrame {
 		scrollPane_1.setBounds(10, 36, 358, 193);
 		panel_3.add(scrollPane_1);
 		
-		JTextArea textArea = new JTextArea();
+		final JTextArea textArea = new JTextArea();
 		scrollPane_1.setViewportView(textArea);
 		
 		JButton btnDecryptAes = new JButton("Decrypt AES");
@@ -506,13 +532,9 @@ public class Main extends JFrame {
 			{
 				Person sender = new Person(username, password);
 				String host = MailClient.IMAP + ".gmail.com";
-				//System.out.println(getCurrentDirectory());
 				String foldername = MailClient.CreateFolderUser(MailClient.SeparatorUsername(sender.username));
 				MailClient.setPlaceDirectory(foldername);
 				System.out.println(foldername);
-				//DeleteMail(sender, host);
-				//DeleteLocal(sender);
-				//DeleteRemote(sender, host);
 				MailClient.fetchMail(sender, host);
 				
 			}
@@ -596,7 +618,7 @@ public class Main extends JFrame {
 			}
 		});
 		
-		
+		// send mail
 		button_1.addActionListener(new ActionListener() {
 			
 			public void actionPerformed(ActionEvent e) 
@@ -613,8 +635,8 @@ public class Main extends JFrame {
 					mailContent.bcc = new Vector( Arrays.asList(bccField.getText().toString().split(",")));
 				
 				mailContent.setContent(textArea_1.getText());
-				//to = Arrays.asList(.split)
-				//mailContent.recveivers
+				mailContent.setTitle("Test mail java swing");
+				mailContent.setHost("imap.gmail.com");
 				try {
 					MailClient.sendMail(sender, mailContent);
 				} catch (IOException e1) {
@@ -622,11 +644,8 @@ public class Main extends JFrame {
 					e1.printStackTrace();
 				}
 				
-				
-				
 			}
 		});
-		
 		
 	}
 }
